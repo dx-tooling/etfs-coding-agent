@@ -1,0 +1,47 @@
+{
+    "name": "enterprise-tooling-for-symfony/coding-agent",
+    "description": "PHP library providing a general-purpose LLM coding agent with workspace tooling",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.4",
+        "enterprise-tooling-for-symfony/v4a-fileedit": "dev-main",
+        "neuron-core/neuron-ai": "^2.11",
+        "symfony/process": "^7.0"
+    },
+    "require-dev": {
+        "erickskrauch/php-cs-fixer-custom-fixers": "^1.3",
+        "ergebnis/phpstan-rules": "^2.12.0",
+        "friendsofphp/php-cs-fixer": "^3.89.2",
+        "phpstan/extension-installer": "^1.4.3",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0.7",
+        "pestphp/pest": "^4.1.3",
+        "tomasvotruba/type-coverage": "^2.0.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "EtfsCodingAgent\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EtfsCodingAgent\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "pestphp/pest-plugin": true
+        },
+        "sort-packages": true
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/dx-tooling/etfs-v4a-fileedit.git"
+        }
+    ]
+}

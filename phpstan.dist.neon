@@ -1,0 +1,11 @@
+includes:
+    - vendor/ergebnis/phpstan-rules/rules.neon
+
+parameters:
+    level: max
+    paths:
+        - src
+    type_coverage:
+        return_type: 100
+        param_type: 100
+        property_type: 100
