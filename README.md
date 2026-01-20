@@ -21,7 +21,7 @@ composer require enterprise-tooling-for-symfony/coding-agent
 
 ```php
 use EtfsCodingAgent\Agent\BaseCodingAgent;
-use EtfsCodingAgent\Facade\WorkspaceToolingFacade;
+use EtfsCodingAgent\Service\WorkspaceToolingService;
 use EtfsCodingAgent\Service\FileOperationsService;
 use EtfsCodingAgent\Service\ShellOperationsService;
 use EtfsCodingAgent\Service\TextOperationsService;
@@ -32,7 +32,7 @@ $shellOps = new ShellOperationsService();
 $textOps = new TextOperationsService($fileOps);
 
 // Create facade
-$facade = new WorkspaceToolingFacade($fileOps, $textOps, $shellOps);
+$facade = new WorkspaceToolingService($fileOps, $textOps, $shellOps);
 
 // Create and use the agent
 $agent = new BaseCodingAgent($facade);
@@ -44,7 +44,7 @@ To add custom tools, extend the `BaseCodingAgent` class:
 
 ```php
 use EtfsCodingAgent\Agent\BaseCodingAgent;
-use EtfsCodingAgent\Facade\WorkspaceToolingFacadeInterface;
+use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface;
 use NeuronAI\Tools\Tool;
 use NeuronAI\Tools\ToolProperty;
 use NeuronAI\Tools\PropertyType;
@@ -82,15 +82,15 @@ class MyCustomAgent extends BaseCodingAgent
 To add custom operations, extend the facade interface and implementation:
 
 ```php
-use EtfsCodingAgent\Facade\WorkspaceToolingFacadeInterface;
-use EtfsCodingAgent\Facade\WorkspaceToolingFacade;
+use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface;
+use EtfsCodingAgent\Service\WorkspaceToolingService;
 
-interface MyCustomFacadeInterface extends WorkspaceToolingFacadeInterface
+interface MyCustomFacadeInterface extends WorkspaceToolingServiceInterface
 {
     public function myCustomMethod(string $param): string;
 }
 
-class MyCustomFacade extends WorkspaceToolingFacade implements MyCustomFacadeInterface
+class MyCustomFacade extends WorkspaceToolingService implements MyCustomFacadeInterface
 {
     public function myCustomMethod(string $param): string
     {

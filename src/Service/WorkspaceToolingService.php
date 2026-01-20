@@ -2,13 +2,10 @@
 
 declare(strict_types=1);
 
-namespace EtfsCodingAgent\Facade;
+namespace EtfsCodingAgent\Service;
 
-use EtfsCodingAgent\Service\FileOperationsServiceInterface;
-use EtfsCodingAgent\Service\ShellOperationsServiceInterface;
-use EtfsCodingAgent\Service\TextOperationsService;
 
-class WorkspaceToolingFacade implements WorkspaceToolingFacadeInterface
+class WorkspaceToolingService implements WorkspaceToolingServiceInterface
 {
     public function __construct(
         protected readonly FileOperationsServiceInterface  $fileOperationsService,

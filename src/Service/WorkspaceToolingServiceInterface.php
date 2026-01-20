@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace EtfsCodingAgent\Facade;
+namespace EtfsCodingAgent\Service;
 
-interface WorkspaceToolingFacadeInterface
+interface WorkspaceToolingServiceInterface
 {
     public function getFolderContent(string $pathToFolder): string;
 

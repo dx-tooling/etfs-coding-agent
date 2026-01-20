@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace EtfsCodingAgent\Agent;
 
-use EtfsCodingAgent\Facade\WorkspaceToolingFacadeInterface;
+use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface;
 use NeuronAI\Agent;
 use NeuronAI\Observability\Events\AgentError;
 use NeuronAI\Observability\Events\ToolCalled;
@@ -19,10 +19,11 @@ use NeuronAI\Tools\ToolProperty;
 use NeuronAI\Tools\ToolPropertyInterface;
 use Throwable;
 
+
 class BaseCodingAgent extends Agent
 {
     public function __construct(
-        protected readonly WorkspaceToolingFacadeInterface $workspaceToolingFacade
+        protected readonly WorkspaceToolingServiceInterface $workspaceToolingFacade
     ) {
     }
 
