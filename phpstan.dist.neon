@@ -1,11 +1,46 @@
-includes:
-    - vendor/ergebnis/phpstan-rules/rules.neon
-
 parameters:
-    level: max
+    level: 10
     paths:
-        - src
+        - src/
+        - tests/
     type_coverage:
-        return_type: 100
-        param_type: 100
-        property_type: 100
+        return: 100
+        param: 100
+        property: 100
+        constant: 100
+    # Stricter scope pollution checks
+    polluteScopeWithLoopInitialAssignments: false
+    polluteScopeWithAlwaysIterableForeach: false
+    polluteScopeWithBlock: false
+    # Check for missing returns in mixed-typed functions
+    checkExplicitMixedMissingReturn: true
+    # Check function/method name casing
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    # Report maybe types in signatures
+    reportMaybesInMethodSignatures: true
+    reportMaybesInPropertyPhpDocTypes: true
+    reportStaticMethodSignatures: true
+    # Check for too wide return types
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    # Check for uninitialized properties
+    checkUninitializedProperties: true
+    # Check for dynamic properties
+    checkDynamicProperties: true
+    # Report wrong PHPDoc types
+    reportWrongPhpDocTypeInVarTag: true
+    reportAnyTypeWideningInVarTag: true
+    # Ergebnis rules configuration (most disabled for library flexibility)
+    ergebnis:
+        final:
+            enabled: false
+        noExtends:
+            enabled: false
+        noNullableReturnTypeDeclaration:
+            enabled: false
+        noConstructorParameterWithDefaultValue:
+            enabled: false
+        noParameterWithNullDefaultValue:
+            enabled: false
+        noParameterWithNullableTypeDeclaration:
+            enabled: false

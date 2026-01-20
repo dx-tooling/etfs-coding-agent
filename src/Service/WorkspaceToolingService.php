@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace EtfsCodingAgent\Service;
 
-
 class WorkspaceToolingService implements WorkspaceToolingServiceInterface
 {
     public function __construct(

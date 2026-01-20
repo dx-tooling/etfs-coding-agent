@@ -19,7 +19,6 @@ use NeuronAI\Tools\ToolProperty;
 use NeuronAI\Tools\ToolPropertyInterface;
 use Throwable;
 
-
 class BaseCodingAgent extends Agent
 {
     public function __construct(
@@ -109,7 +108,7 @@ class BaseCodingAgent extends Agent
      * Returns the core tools available to the agent.
      * Override this method to add additional tools.
      *
-     * @phpstan-ignore noAssociativeArraysAcrossBoundaries.return
+     * @return list<ToolInterface>
      */
     protected function tools(): array
     {

@@ -1,4 +1,7 @@
-# etfs-coding-agent
+# Enterprise Tooling for Symfony — Coding Agent library
+
+[![Quality](https://github.com/dx-tooling/etfs-coding-agent/actions/workflows/quality.yml/badge.svg)](https://github.com/dx-tooling/etfs-coding-agent/actions/workflows/quality.yml)
+[![Tests](https://github.com/dx-tooling/etfs-coding-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/dx-tooling/etfs-coding-agent/actions/workflows/tests.yml)
 
 A PHP library providing a general-purpose LLM coding agent with workspace tooling capabilities.
 
@@ -8,6 +11,11 @@ A PHP library providing a general-purpose LLM coding agent with workspace toolin
 - **Diff Application**: Apply unified diffs (V4A format) to files
 - **Shell Operations**: Execute shell commands in workspace directories
 - **Extensible Agent**: Base coding agent with core tools that can be extended
+
+## Requirements
+
+- PHP 8.4 or higher
+- Composer
 
 ## Installation
 
@@ -103,25 +111,123 @@ class MyCustomFacade extends WorkspaceToolingService implements MyCustomFacadeIn
 
 The `BaseCodingAgent` provides these core tools:
 
-| Tool | Description |
-|------|-------------|
-| `get_folder_content` | List files and directories in a folder |
-| `get_file_content` | Read full file content |
-| `get_file_info` | Get file metadata (lines, size, extension) |
-| `get_file_lines` | Read specific lines from a file |
-| `search_in_file` | Search for patterns with context |
-| `replace_in_file` | Replace unique strings in a file |
-| `apply_diff_to_file` | Apply unified diffs to a file |
-| `create_directory` | Create directories |
-| `run_shell_command` | Execute shell commands |
+| Tool                 | Description                                |
+| -------------------- | ------------------------------------------ |
+| `get_folder_content` | List files and directories in a folder     |
+| `get_file_content`   | Read full file content                     |
+| `get_file_info`      | Get file metadata (lines, size, extension) |
+| `get_file_lines`     | Read specific lines from a file            |
+| `search_in_file`     | Search for patterns with context           |
+| `replace_in_file`    | Replace unique strings in a file           |
+| `apply_diff_to_file` | Apply unified diffs to a file              |
+| `create_directory`   | Create directories                         |
+| `run_shell_command`  | Execute shell commands                     |
 
-## Requirements
+## Development Setup
 
-- PHP 8.4+
-- neuron-core/neuron-ai ^2.11
-- symfony/process ^7.0
-- enterprise-tooling-for-symfony/v4a-fileedit
+This project uses mise-en-place for tool management and Docker Compose for a deterministic development environment.
+
+### Prerequisites
+
+- Docker Desktop
+- mise-en-place (https://mise.jdx.dev)
+
+**Note**: You only need mise and Docker on your host machine. PHP, Node.js, and all other tools run inside the Docker container.
+
+### Setup
+
+1. Clone the repository:
+
+    ```bash
+    git clone <repository-url>
+    cd etfs-coding-agent
+    ```
+
+2. Trust the mise configuration:
+
+    ```bash
+    mise trust
+    ```
+
+3. Install dependencies (runs in an ephemeral container):
+
+    ```bash
+    mise run in-app-container composer install
+    mise run in-app-container mise trust
+    ```
+
+4. Run quality checks:
+
+    ```bash
+    mise run quality
+    ```
+
+5. Run tests:
+    ```bash
+    mise run tests
+    ```
+
+**Note**: Containers are created ephemerally for each command. There's no need to start or stop containers manually - they're created on-demand and automatically removed after execution.
+
+### Available Commands
+
+- `mise run quality` - Run all quality tools (PHP CS Fixer, Prettier, PHPStan)
+- `mise run quality --check-violations` - Check for violations without fixing
+- `mise run tests` - Run the test suite
+
+### Docker Container
+
+The Docker container provides a consistent PHP 8.4 CLI environment with:
+
+- PHP 8.4 with required extensions (mbstring, pcntl, bcmath, intl, zip)
+- Composer
+- mise-en-place (for managing tools inside the container)
+- Node.js 24 (pre-installed via mise during Docker build to avoid download overhead)
+
+Containers are created **ephemerally** for each command execution - they're created on-demand, run the command, and are automatically removed afterward. This ensures a clean, consistent environment for every execution without needing to manage container lifecycle.
+
+All development commands run inside ephemeral containers via mise tasks. To execute commands directly in an ephemeral container:
+
+```bash
+mise run in-app-container <command>
+```
+
+## Testing
+
+The library includes comprehensive unit tests using Pest. Run tests with:
+
+```bash
+mise run tests
+```
+
+Or directly:
+
+```bash
+php vendor/bin/pest
+```
+
+## Code Quality
+
+The project enforces strict code quality standards:
+
+- **PHP CS Fixer**: Symfony coding standards with custom rules
+- **PHPStan**: Level 10 (maximum strictness) with 100% type coverage (return, param, property, constant)
+- **Prettier**: Code formatting for JSON, YAML, Markdown files
+
+Run all quality checks:
+
+```bash
+mise run quality
+```
 
 ## License
 
 MIT
+
+## Contributing
+
+Contributions are welcome! Please ensure that:
+
+1. All tests pass (`mise run tests`)
+2. Code quality checks pass (`mise run quality`)
+3. Code follows the project's coding standards

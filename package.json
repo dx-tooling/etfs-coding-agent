@@ -1,0 +1,13 @@
+{
+    "name": "@enterprise-tooling-for-symfony/coding-agent",
+    "version": "1.0.0",
+    "description": "Development tooling configuration for PHP Coding Agent library",
+    "type": "module",
+    "scripts": {
+        "prettier": "prettier --check './{,**/}*.{css,ts,js,mts,mjs,json,yaml,yml,md}' '!**/package-lock.json' '!**/vendor/**'",
+        "prettier:fix": "prettier --write './{,**/}*.{css,ts,js,mts,mjs,json,yaml,yml,md}' '!**/package-lock.json' '!**/vendor/**'"
+    },
+    "devDependencies": {
+        "prettier": "^3.6"
+    }
+}

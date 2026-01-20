@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 use EtfsCodingAgent\Service\FileOperationsService;
 
-beforeEach(function () {
-    $this->service = new FileOperationsService();
-    $this->tempDir = sys_get_temp_dir() . '/file_ops_test_' . uniqid();
-    mkdir($this->tempDir, 0755, true);
-});
+function createTempDir(): string
+{
+    $tempDir = sys_get_temp_dir() . '/file_ops_test_' . uniqid();
+    mkdir($tempDir, 0755, true);
 
-afterEach(function () {
-    removeDirectory($this->tempDir);
-});
+    return $tempDir;
+}
 
 function removeDirectory(string $dir): void
 {
@@ -50,208 +48,362 @@ function createTestFile(string $tempDir, string $filename, string $content): str
 }
 
 it('returns error when listing nonexistent directory', function () {
-    $result = $this->service->listFolderContent($this->tempDir . '/nonexistent');
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect($result)->toContain('Error:');
-    expect($result)->toContain('does not exist');
-    expect($result)->toContain('create_directory');
+    try {
+        $result = $service->listFolderContent($tempDir . '/nonexistent');
+
+        expect($result)->toContain('Error:');
+        expect($result)->toContain('does not exist');
+        expect($result)->toContain('create_directory');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns error when getting content of nonexistent file', function () {
-    $result = $this->service->getFileContent($this->tempDir . '/nonexistent.txt');
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect($result)->toContain('Error:');
-    expect($result)->toContain('does not exist');
+    try {
+        $result = $service->getFileContent($tempDir . '/nonexistent.txt');
+
+        expect($result)->toContain('Error:');
+        expect($result)->toContain('does not exist');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns error when getting lines of nonexistent file', function () {
-    $result = $this->service->getFileLines($this->tempDir . '/nonexistent.txt', 1, 10);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect($result)->toContain('Error:');
-    expect($result)->toContain('does not exist');
+    try {
+        $result = $service->getFileLines($tempDir . '/nonexistent.txt', 1, 10);
+
+        expect($result)->toContain('Error:');
+        expect($result)->toContain('does not exist');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns error when searching in nonexistent file', function () {
-    $result = $this->service->searchInFile($this->tempDir . '/nonexistent.txt', 'pattern');
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect($result)->toContain('Error:');
-    expect($result)->toContain('does not exist');
+    try {
+        $result = $service->searchInFile($tempDir . '/nonexistent.txt', 'pattern');
+
+        expect($result)->toContain('Error:');
+        expect($result)->toContain('does not exist');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns specific lines from file', function () {
-    $content = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileLines($path, 2, 4);
+    try {
+        $content = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('Line 2');
-    expect($result)->toContain('Line 3');
-    expect($result)->toContain('Line 4');
-    expect($result)->not->toContain('Line 1');
-    expect($result)->not->toContain('Line 5');
+        $result = $service->getFileLines($path, 2, 4);
+
+        expect($result)->toContain('Line 2');
+        expect($result)->toContain('Line 3');
+        expect($result)->toContain('Line 4');
+        expect($result)->not->toContain('Line 1');
+        expect($result)->not->toContain('Line 5');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('includes line numbers when getting file lines', function () {
-    $content = "Line 1\nLine 2\nLine 3";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileLines($path, 1, 3);
+    try {
+        $content = "Line 1\nLine 2\nLine 3";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('1 |');
-    expect($result)->toContain('2 |');
-    expect($result)->toContain('3 |');
+        $result = $service->getFileLines($path, 1, 3);
+
+        expect($result)->toContain('1 |');
+        expect($result)->toContain('2 |');
+        expect($result)->toContain('3 |');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('handles out of bounds line numbers gracefully', function () {
-    $content = "Line 1\nLine 2\nLine 3";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileLines($path, 1, 100);
+    try {
+        $content = "Line 1\nLine 2\nLine 3";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('Line 1');
-    expect($result)->toContain('Line 3');
+        $result = $service->getFileLines($path, 1, 100);
+
+        expect($result)->toContain('Line 1');
+        expect($result)->toContain('Line 3');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns message when start line is beyond file length', function () {
-    $content = "Line 1\nLine 2";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileLines($path, 100, 200);
+    try {
+        $content = "Line 1\nLine 2";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('only');
-    expect($result)->toContain('lines');
+        $result = $service->getFileLines($path, 100, 200);
+
+        expect($result)->toContain('only');
+        expect($result)->toContain('lines');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns correct file metadata', function () {
-    $content = "Line 1\nLine 2\nLine 3";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileInfo($path);
+    try {
+        $content = "Line 1\nLine 2\nLine 3";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result->path)->toBe($path);
-    expect($result->lineCount)->toBe(3);
-    expect($result->extension)->toBe('txt');
-    expect($result->sizeBytes)->toBeGreaterThan(0);
+        $result = $service->getFileInfo($path);
+
+        expect($result->path)->toBe($path);
+        expect($result->lineCount)->toBe(3);
+        expect($result->extension)->toBe('txt');
+        expect($result->sizeBytes)->toBeGreaterThan(0);
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('handles files without extension', function () {
-    $content = 'Some content';
-    $path    = createTestFile($this->tempDir, 'noextension', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->getFileInfo($path);
+    try {
+        $content = 'Some content';
+        $path    = createTestFile($tempDir, 'noextension', $content);
 
-    expect($result->extension)->toBe('(none)');
+        $result = $service->getFileInfo($path);
+
+        expect($result->extension)->toBe('(none)');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('finds matches in file', function () {
-    $content = "First line\nSearchable content here\nLast line";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->searchInFile($path, 'Searchable');
+    try {
+        $content = "First line\nSearchable content here\nLast line";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('Found 1 match');
-    expect($result)->toContain('Searchable content here');
-    expect($result)->toContain('>>>');
+        $result = $service->searchInFile($path, 'Searchable');
+
+        expect($result)->toContain('Found 1 match');
+        expect($result)->toContain('Searchable content here');
+        expect($result)->toContain('>>>');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('includes context lines when searching', function () {
-    $content = "Line 1\nLine 2\nTarget line\nLine 4\nLine 5";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->searchInFile($path, 'Target', 2);
+    try {
+        $content = "Line 1\nLine 2\nTarget line\nLine 4\nLine 5";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('Line 2');
-    expect($result)->toContain('Target line');
-    expect($result)->toContain('Line 4');
+        $result = $service->searchInFile($path, 'Target', 2);
+
+        expect($result)->toContain('Line 2');
+        expect($result)->toContain('Target line');
+        expect($result)->toContain('Line 4');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns no matches message when pattern not found', function () {
-    $content = 'Some content here';
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->searchInFile($path, 'nonexistent');
+    try {
+        $content = 'Some content here';
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('No matches found');
+        $result = $service->searchInFile($path, 'nonexistent');
+
+        expect($result)->toContain('No matches found');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('finds multiple matches in file', function () {
-    $content = "Match one\nOther line\nMatch two\nAnother line\nMatch three";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->searchInFile($path, 'Match');
+    try {
+        $content = "Match one\nOther line\nMatch two\nAnother line\nMatch three";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    expect($result)->toContain('Found 3 match');
+        $result = $service->searchInFile($path, 'Match');
+
+        expect($result)->toContain('Found 3 match');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('replaces unique string in file', function () {
-    $content = 'Hello World';
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $this->service->replaceInFile($path, 'World', 'Universe');
+    try {
+        $content = 'Hello World';
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    $newContent = file_get_contents($path);
-    expect($newContent)->toBe('Hello Universe');
+        $service->replaceInFile($path, 'World', 'Universe');
+
+        $newContent = file_get_contents($path);
+        expect($newContent)->toBe('Hello Universe');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('throws when string not found during replace', function () {
-    $content = 'Hello World';
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect(fn () => $this->service->replaceInFile($path, 'nonexistent', 'replacement'))
-        ->toThrow(RuntimeException::class, 'not found');
+    try {
+        $content = 'Hello World';
+        $path    = createTestFile($tempDir, 'test.txt', $content);
+
+        expect(fn () => $service->replaceInFile($path, 'nonexistent', 'replacement'))
+            ->toThrow(RuntimeException::class, 'not found');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('throws when multiple occurrences found during replace', function () {
-    $content = 'Hello Hello World';
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    expect(fn () => $this->service->replaceInFile($path, 'Hello', 'Hi'))
-        ->toThrow(RuntimeException::class, '2 times');
+    try {
+        $content = 'Hello Hello World';
+        $path    = createTestFile($tempDir, 'test.txt', $content);
+
+        expect(fn () => $service->replaceInFile($path, 'Hello', 'Hi'))
+            ->toThrow(RuntimeException::class, '2 times');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('replaces multiline content in file', function () {
-    $content = "Line 1\nLine 2\nLine 3";
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $this->service->replaceInFile($path, "Line 2\nLine 3", "Modified 2\nModified 3");
+    try {
+        $content = "Line 1\nLine 2\nLine 3";
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    $newContent = file_get_contents($path);
-    expect($newContent)->toBe("Line 1\nModified 2\nModified 3");
+        $service->replaceInFile($path, "Line 2\nLine 3", "Modified 2\nModified 3");
+
+        $newContent = file_get_contents($path);
+        expect($newContent)->toBe("Line 1\nModified 2\nModified 3");
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('preserves whitespace during replace', function () {
-    $content = '    indented line';
-    $path    = createTestFile($this->tempDir, 'test.txt', $content);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $this->service->replaceInFile($path, '    indented', '        double-indented');
+    try {
+        $content = '    indented line';
+        $path    = createTestFile($tempDir, 'test.txt', $content);
 
-    $newContent = file_get_contents($path);
-    expect($newContent)->toBe('        double-indented line');
+        $service->replaceInFile($path, '    indented', '        double-indented');
+
+        $newContent = file_get_contents($path);
+        expect($newContent)->toBe('        double-indented line');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('creates new directory', function () {
-    $dirPath = $this->tempDir . '/new_directory';
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->createDirectory($dirPath);
+    try {
+        $dirPath = $tempDir . '/new_directory';
 
-    expect(is_dir($dirPath))->toBeTrue();
-    expect($result)->toContain('Successfully created');
+        $result = $service->createDirectory($dirPath);
+
+        expect(is_dir($dirPath))->toBeTrue();
+        expect($result)->toContain('Successfully created');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('creates nested directories', function () {
-    $dirPath = $this->tempDir . '/parent/child/grandchild';
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->createDirectory($dirPath);
+    try {
+        $dirPath = $tempDir . '/parent/child/grandchild';
 
-    expect(is_dir($dirPath))->toBeTrue();
-    expect($result)->toContain('Successfully created');
+        $result = $service->createDirectory($dirPath);
+
+        expect(is_dir($dirPath))->toBeTrue();
+        expect($result)->toContain('Successfully created');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
 
 it('returns message when directory already exists', function () {
-    $dirPath = $this->tempDir . '/existing_directory';
-    mkdir($dirPath, 0755, true);
+    $service = new FileOperationsService();
+    $tempDir = createTempDir();
 
-    $result = $this->service->createDirectory($dirPath);
+    try {
+        $dirPath = $tempDir . '/existing_directory';
+        mkdir($dirPath, 0755, true);
 
-    expect($result)->toContain('already exists');
+        $result = $service->createDirectory($dirPath);
+
+        expect($result)->toContain('already exists');
+    } finally {
+        removeDirectory($tempDir);
+    }
 });
