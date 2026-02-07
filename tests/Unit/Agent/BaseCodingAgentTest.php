@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use EtfsCodingAgent\Agent\BaseCodingAgent;
 use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface;
+use NeuronAI\Exceptions\ToolMaxTriesException;
 use NeuronAI\Tools\PropertyType;
 use NeuronAI\Tools\Tool;
 use NeuronAI\Tools\ToolProperty;
@@ -126,4 +127,68 @@ it('formats tool error message correctly', function () {
     expect($result)->toContain('optional_param');
     expect($result)->toContain('required');
     expect($result)->toContain('optional');
+});
+
+it('throws ToolMaxTriesException when a tool exceeds max attempts', function () {
+    $mockFacade = createMockFacade();
+    $agent      = new BaseCodingAgent($mockFacade);
+
+    // Default toolMaxTries is 5
+    $tool = Tool::make('test_tool', 'A test tool')
+        ->setCallable(fn (): string => 'ok');
+
+    $reflection = new ReflectionMethod($agent, 'executeSingleTool');
+
+    // Execute 5 times — should succeed
+    for ($i = 0; $i < 5; $i++) {
+        $reflection->invoke($agent, $tool);
+    }
+
+    expect($tool->getResult())->toBe('ok');
+
+    // 6th attempt should throw
+    $reflection->invoke($agent, $tool);
+})->throws(ToolMaxTriesException::class, 'too many times');
+
+it('tracks tool attempts per tool name independently', function () {
+    $mockFacade = createMockFacade();
+    $agent      = new BaseCodingAgent($mockFacade);
+
+    $toolA = Tool::make('tool_a', 'Tool A')->setCallable(fn (): string => 'a');
+    $toolB = Tool::make('tool_b', 'Tool B')->setCallable(fn (): string => 'b');
+
+    $reflection = new ReflectionMethod($agent, 'executeSingleTool');
+
+    // Execute tool_a 4 times (under limit of 5)
+    for ($i = 0; $i < 4; $i++) {
+        $reflection->invoke($agent, $toolA);
+    }
+
+    // Execute tool_b 4 times (under limit of 5) — should not be affected by tool_a's count
+    for ($i = 0; $i < 4; $i++) {
+        $reflection->invoke($agent, $toolB);
+    }
+
+    expect($toolA->getResult())->toBe('a');
+    expect($toolB->getResult())->toBe('b');
+});
+
+it('catches tool execution errors and sets them as result without affecting attempt tracking', function () {
+    $mockFacade = createMockFacade();
+    $agent      = new BaseCodingAgent($mockFacade);
+
+    $callCount = 0;
+    $tool      = Tool::make('flaky_tool', 'A flaky tool')
+        ->setCallable(function () use (&$callCount): string {
+            $callCount++;
+            throw new RuntimeException('Flaky error');
+        });
+
+    $reflection = new ReflectionMethod($agent, 'executeSingleTool');
+
+    // Execute — should catch the error and set it as result
+    $reflection->invoke($agent, $tool);
+
+    expect($tool->getResult())->toContain('Flaky error');
+    expect($callCount)->toBe(1);
 });
