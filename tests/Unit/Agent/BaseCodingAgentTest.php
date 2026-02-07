@@ -129,28 +129,48 @@ it('formats tool error message correctly', function () {
     expect($result)->toContain('optional');
 });
 
-it('throws ToolMaxTriesException when a tool exceeds max attempts', function () {
+it('throws ToolMaxTriesException on consecutive identical tool calls', function () {
     $mockFacade = createMockFacade();
     $agent      = new BaseCodingAgent($mockFacade);
 
-    // Default toolMaxTries is 5
-    $tool = Tool::make('test_tool', 'A test tool')
+    // Tool with fixed inputs — every call has the same fingerprint
+    $tool = Tool::make('get_workspace_rules', 'Get rules')
         ->setCallable(fn (): string => 'ok');
 
     $reflection = new ReflectionMethod($agent, 'executeSingleTool');
 
-    // Execute 5 times — should succeed
-    for ($i = 0; $i < 5; ++$i) {
+    // First 3 identical calls should succeed (MAX_CONSECUTIVE_IDENTICAL_CALLS = 3)
+    for ($i = 0; $i < 3; ++$i) {
         $reflection->invoke($agent, $tool);
     }
 
     expect($tool->getResult())->toBe('ok');
 
-    // 6th attempt should throw
+    // 4th consecutive identical call should throw
     $reflection->invoke($agent, $tool);
-})->throws(ToolMaxTriesException::class, 'too many times');
+})->throws(ToolMaxTriesException::class, 'infinite loop');
 
-it('tracks tool attempts per tool name independently', function () {
+it('allows many calls to the same tool with different arguments', function () {
+    $mockFacade = createMockFacade();
+    $agent      = new BaseCodingAgent($mockFacade);
+
+    $tool = Tool::make('get_file_info', 'Get file info')
+        ->addProperty(new ToolProperty('path', PropertyType::STRING, 'File path', true))
+        ->setCallable(fn (string $path): string => "info for {$path}");
+
+    $reflection = new ReflectionMethod($agent, 'executeSingleTool');
+
+    // Call the same tool 20 times — each with different arguments
+    // This must NOT throw; it's normal coding agent behavior
+    for ($i = 0; $i < 20; ++$i) {
+        $tool->setInputs(['path' => "/workspace/file_{$i}.php"]);
+        $reflection->invoke($agent, $tool);
+    }
+
+    expect($tool->getResult())->toBe('info for /workspace/file_19.php');
+});
+
+it('resets consecutive count when a different call is interleaved', function () {
     $mockFacade = createMockFacade();
     $agent      = new BaseCodingAgent($mockFacade);
 
@@ -159,21 +179,23 @@ it('tracks tool attempts per tool name independently', function () {
 
     $reflection = new ReflectionMethod($agent, 'executeSingleTool');
 
-    // Execute tool_a 4 times (under limit of 5)
-    for ($i = 0; $i < 4; ++$i) {
+    // Call tool_a 3 times (at the limit)
+    for ($i = 0; $i < 3; ++$i) {
         $reflection->invoke($agent, $toolA);
     }
 
-    // Execute tool_b 4 times (under limit of 5) — should not be affected by tool_a's count
-    for ($i = 0; $i < 4; ++$i) {
-        $reflection->invoke($agent, $toolB);
+    // Interleave with tool_b — resets the consecutive counter
+    $reflection->invoke($agent, $toolB);
+
+    // Call tool_a 3 more times — should succeed because counter was reset
+    for ($i = 0; $i < 3; ++$i) {
+        $reflection->invoke($agent, $toolA);
     }
 
     expect($toolA->getResult())->toBe('a');
-    expect($toolB->getResult())->toBe('b');
 });
 
-it('catches tool execution errors and sets them as result without affecting attempt tracking', function () {
+it('catches tool execution errors and sets them as result', function () {
     $mockFacade = createMockFacade();
     $agent      = new BaseCodingAgent($mockFacade);
 

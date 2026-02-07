@@ -22,6 +22,20 @@ use Throwable;
 
 class BaseCodingAgent extends Agent
 {
+    private const int MAX_CONSECUTIVE_IDENTICAL_CALLS = 3;
+
+    /**
+     * Fingerprint of the last tool call (tool name + serialized inputs).
+     * Used to detect consecutive identical calls — the signature of an
+     * infinite loop (e.g. the agent calling get_workspace_rules with the
+     * same arguments over and over after context loss).
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
+     */
+    private string $lastToolCallFingerprint = '';
+
+    private int $consecutiveIdenticalCalls = 0;
+
     public function __construct(
         protected readonly WorkspaceToolingServiceInterface $workspaceToolingFacade
     ) {
@@ -284,9 +298,12 @@ class BaseCodingAgent extends Agent
      * Override to catch tool execution errors and return them as results instead of crashing.
      * This allows the agent to learn from its mistakes and retry with correct parameters.
      *
-     * Also tracks tool invocation attempts and enforces a maximum retry limit
-     * (via ToolMaxTriesException) to prevent infinite tool-call loops — e.g. when
-     * context-window trimming causes the agent to lose its conversation state.
+     * Also detects infinite tool-call loops by tracking consecutive identical
+     * calls (same tool name + same arguments). A coding agent legitimately
+     * calls the same tool many times with different arguments (e.g. reading
+     * dozens of files), so a simple per-tool-name counter is too restrictive.
+     * Instead, we only flag when the exact same call repeats consecutively,
+     * which is the signature of a context-loss loop.
      *
      * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
      *
@@ -294,18 +311,7 @@ class BaseCodingAgent extends Agent
      */
     protected function executeSingleTool(ToolInterface $tool): void
     {
-        $this->toolAttempts[$tool->getName()] = ($this->toolAttempts[$tool->getName()] ?? 0) + 1;
-
-        $maxTries = $tool->getMaxTries() ?? $this->toolMaxTries;
-
-        if ($this->toolAttempts[$tool->getName()] > $maxTries) {
-            $exception = new ToolMaxTriesException(
-                "Tool {$tool->getName()} has been attempted too many times: {$maxTries} attempts."
-            );
-            $this->notify('error', new AgentError($exception));
-
-            throw $exception;
-        }
+        $this->detectInfiniteLoop($tool);
 
         $this->notify('tool-calling', new ToolCalling($tool));
 
@@ -324,6 +330,36 @@ class BaseCodingAgent extends Agent
         }
 
         $this->notify('tool-called', new ToolCalled($tool));
+    }
+
+    /**
+     * Detect infinite tool-call loops by tracking consecutive identical calls.
+     *
+     * A "fingerprint" is the combination of tool name and serialized inputs.
+     * When the same fingerprint appears consecutively more than the threshold,
+     * the agent is likely stuck in a loop and we throw to break out.
+     *
+     * @throws ToolMaxTriesException
+     */
+    private function detectInfiniteLoop(ToolInterface $tool): void
+    {
+        $fingerprint = $tool->getName() . ':' . json_encode($tool->getInputs(), JSON_THROW_ON_ERROR);
+
+        if ($fingerprint === $this->lastToolCallFingerprint) {
+            ++$this->consecutiveIdenticalCalls;
+        } else {
+            $this->lastToolCallFingerprint   = $fingerprint;
+            $this->consecutiveIdenticalCalls = 1;
+        }
+
+        if ($this->consecutiveIdenticalCalls > self::MAX_CONSECUTIVE_IDENTICAL_CALLS) {
+            $exception = new ToolMaxTriesException(
+                "Tool {$tool->getName()} has been called {$this->consecutiveIdenticalCalls} times consecutively with identical arguments. This looks like an infinite loop."
+            );
+            $this->notify('error', new AgentError($exception));
+
+            throw $exception;
+        }
     }
 
     private function formatToolErrorMessage(Tool $tool, Throwable $exception): string
