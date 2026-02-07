@@ -140,7 +140,7 @@ it('throws ToolMaxTriesException when a tool exceeds max attempts', function () 
     $reflection = new ReflectionMethod($agent, 'executeSingleTool');
 
     // Execute 5 times — should succeed
-    for ($i = 0; $i < 5; $i++) {
+    for ($i = 0; $i < 5; ++$i) {
         $reflection->invoke($agent, $tool);
     }
 
@@ -160,12 +160,12 @@ it('tracks tool attempts per tool name independently', function () {
     $reflection = new ReflectionMethod($agent, 'executeSingleTool');
 
     // Execute tool_a 4 times (under limit of 5)
-    for ($i = 0; $i < 4; $i++) {
+    for ($i = 0; $i < 4; ++$i) {
         $reflection->invoke($agent, $toolA);
     }
 
     // Execute tool_b 4 times (under limit of 5) — should not be affected by tool_a's count
-    for ($i = 0; $i < 4; $i++) {
+    for ($i = 0; $i < 4; ++$i) {
         $reflection->invoke($agent, $toolB);
     }
 
@@ -180,7 +180,7 @@ it('catches tool execution errors and sets them as result without affecting atte
     $callCount = 0;
     $tool      = Tool::make('flaky_tool', 'A flaky tool')
         ->setCallable(function () use (&$callCount): string {
-            $callCount++;
+            ++$callCount;
             throw new RuntimeException('Flaky error');
         });
 
