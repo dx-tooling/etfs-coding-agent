@@ -6,6 +6,7 @@ namespace EtfsCodingAgent\Agent;
 
 use EtfsCodingAgent\Service\WorkspaceToolingServiceInterface;
 use NeuronAI\Agent;
+use NeuronAI\Exceptions\ToolMaxTriesException;
 use NeuronAI\Observability\Events\AgentError;
 use NeuronAI\Observability\Events\ToolCalled;
 use NeuronAI\Observability\Events\ToolCalling;
@@ -282,9 +283,30 @@ class BaseCodingAgent extends Agent
     /**
      * Override to catch tool execution errors and return them as results instead of crashing.
      * This allows the agent to learn from its mistakes and retry with correct parameters.
+     *
+     * Also tracks tool invocation attempts and enforces a maximum retry limit
+     * (via ToolMaxTriesException) to prevent infinite tool-call loops — e.g. when
+     * context-window trimming causes the agent to lose its conversation state.
+     *
+     * @see https://github.com/dx-tooling/sitebuilder-webapp/issues/75
+     *
+     * @throws ToolMaxTriesException
      */
     protected function executeSingleTool(ToolInterface $tool): void
     {
+        $this->toolAttempts[$tool->getName()] = ($this->toolAttempts[$tool->getName()] ?? 0) + 1;
+
+        $maxTries = $tool->getMaxTries() ?? $this->toolMaxTries;
+
+        if ($this->toolAttempts[$tool->getName()] > $maxTries) {
+            $exception = new ToolMaxTriesException(
+                "Tool {$tool->getName()} has been attempted too many times: {$maxTries} attempts."
+            );
+            $this->notify('error', new AgentError($exception));
+
+            throw $exception;
+        }
+
         $this->notify('tool-calling', new ToolCalling($tool));
 
         try {
